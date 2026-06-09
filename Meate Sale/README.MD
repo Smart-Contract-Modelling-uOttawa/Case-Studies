@@ -1,1 +1,0 @@
-#Meat Sale Contract
