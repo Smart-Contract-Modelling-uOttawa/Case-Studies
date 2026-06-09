@@ -1,0 +1,33 @@
+Domain domain
+ Restaurant isA Role;
+ Customer isA Role with addr: String;
+ Pizza isA Asset with size: {'S', 'M', 'L'}, price: Number,
+    ingredients: Powerset({'peperoni', 'prosciutto', 'melanzane'});
+ Ordered isA Event with who: Customer, item: Pizza;
+ Delivered isA Event with item: Pizza, delAddr: String;
+ Paid isA Event with amount: Number;
+endDomain
+
+Contract PizzaC(cust: Customer, restaurant: Restaurant, pizza: Pizza)
+ Declarations
+   ordered:   Ordered with who := cust, item := pizza;
+   delivered: Delivered with item:= pizza, delAddr := cust.addr;
+   paid:      Paid with amount:= pizza.price;
+   paidL:     Paid with amount := 0.5 * pizza.price;
+   payLateOptionChosen: Event;
+ Obligations
+   // Signature of obligations:
+   // name : [trigger(*$\rightarrow$*)] Obligation(debtor, creditor, antecedent, consequent)
+   Odel: Obligation(restaurant, cust, happens(ordered, t), happensBefore(delivered, t+30min));
+   Opay: Obligation(cust, restaurant, happens(delivered, t), happensBefore(paid, t+5min)); // Upon delivery, i.e., t+5min
+   OpayL: happens(payLateOptionChosen, _) (*$\rightarrow$*)
+            Obligation(cust, restaurant, happens(delivered, t), happens(paidL, t+5min));
+ Powers
+   // Signature of powers:
+   // name : [trigger (*$\rightarrow$*)] Power(creditor, debtor, antecedent, consequent)
+   Pcancel: not happensBefore(delivered, ordered.Time+30min) (*$\rightarrow$*)
+           Power(cust, restaurant, true, terminates(self))
+   PlateP: not happensBefore(delivered, ordered.Time+30min) (*$\rightarrow$*)
+           Power(cust, restaurant, happens(delivered, _),
+                 happens(payLateOptionChosen, _));
+endContract
